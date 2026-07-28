@@ -27,13 +27,18 @@ POST /run { sources, window_days, confirm_window_hours }
 | `functions/ingest.ts` | Pipeline-internal: identity resolution, reference extraction, and normalized writes — the one place harvested data becomes `source_event`/`ticket_state`/`identity_claim` rows |
 | `functions/confirm.ts` | Pipeline-internal: calls `confirm_attributions()`, assembles the cited response in the PRD §7 shape |
 | `hydradb/` | HydraDB REST client (live-verified against the real API — see `hydradb/client.ts`'s header for two wrong turns worth not repeating) and the harvest logic: Slack/GitHub/Linear are all pulled directly from their own APIs, with Slack additionally mirrored into HydraDB as searchable knowledge |
-| `rocketride/` | The public `POST /run` pipeline — thin by design; see `rocketride/README.md` for what's confirmed vs. still needs verification against a live account |
+| `rocketride/` | Not the public endpoint today — live-tested against a real Cloud account and found to have no data-lane path for a plain outbound call; `run.pipe` is left as a thin `webhook → response_text` shell rather than a guessed config. See `rocketride/README.md` for the two findings and the follow-up paths |
 | `web/` | Next.js landing page for the project |
 | `PRD.md` | MVP scope, API contract, data model, ranking formula, build schedule, demo script |
 | `PIVOT.md` | The design rationale — why attribution and access control had to move into the database |
 | `AGENTS.md` | InsForge backend setup notes for coding agents |
 
 ## Running the pipeline end to end
+
+Copy `.env.example` to `hydradb/.env` (the scripts below run with `hydradb/`
+as their working directory, which is where `dotenv/config` looks) and fill in
+InsForge, HydraDB, Slack/GitHub/Linear, and (optionally) RocketRide
+credentials — see the comments in that file for where each one comes from.
 
 ```bash
 cd hydradb
@@ -43,9 +48,11 @@ npm run sync -- --sources=slack,github,linear
 ```
 
 `sync.ts` is a complete, RocketRide-independent run of the pipeline — useful
-for testing the harvest → ingest → confirm flow before RocketRide is wired
-up. `npm run serve` runs the same logic as an HTTP server that RocketRide's
-`run.pipe` fronts publicly; see `rocketride/README.md` for deployment.
+for testing the harvest → ingest → confirm flow. `npm run serve` runs the
+same logic as an HTTP server; that's the actual public endpoint for the demo
+today, exposed via a tunnel (ngrok, Cloudflare Tunnel, etc.) rather than
+fronted by RocketRide — see `rocketride/README.md` for why and what would
+change that.
 
 ## Backend (InsForge)
 
@@ -74,3 +81,18 @@ npm run dev
 ```
 
 Next.js 16 / React 19 / Tailwind 4, with GSAP + Lenis for scroll/animation.
+
+
+## Demo environment
+
+Witness needs a workspace where a real pattern exists: someone whose contribution is visible in Slack but invisible in the system of record. We couldn't use a real company's data, so we constructed a synthetic one.
+Setup. Three team members took personas on a fictional payments startup:
+Persona	Linear identity	Slack identity	Role in the data
+The Ghost	Ars Ray	@arsen	Closes 2 tickets. Answers everyone's questions.
+The Star	benjamin nisevich	@ben	Closes 11 tickets. Asks for help when stuck.
+The Third	Philip Nisevich	@philip	Owns payments. Closes 3 tickets.
+Each persona used a real account on both platforms, so HydraDB's entity resolution operates on genuinely distinct identifiers — a Slack user ID and a Linear user UUID with no shared key.
+Linear. 24 issues (WIT-5 through WIT-28) created via the GraphQL API, assigned unevenly: 11 to the Star, 3 to the Third, 2 to the Ghost, plus 8 left open. The resulting ledger makes the Ghost the lowest performer on the team by every dashboard metric.
+Slack. ~110 messages posted via chat.postMessage using per-user OAuth tokens, across #eng, #eng-help, and #incidents. Seven threads follow the same shape: the Ghost diagnoses a problem on a ticket assigned to someone else, and that ticket is subsequently closed by its assignee. The remaining ~90 messages are background noise generated from character briefs — standups, jokes, dead threads, a wrong answer that gets corrected.
+Ordering. Slack's API stamps messages at post time; there is no backdating. So we posted every Slack message before transitioning any Linear issue to Done. The calendar spread is compressed into an hour, but the causal ordering — diagnosis precedes resolution — is real, and that ordering is what the pipeline detects.
+Blind generation. The filler corpus was generated from behavioral descriptions of each persona, not from a specification of what the pipeline looks for. The generator was never shown the detection logic. The findings are whatever the pipeline surfaced when pointed at the connectors.
