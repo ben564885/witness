@@ -129,9 +129,10 @@ export default function Home() {
                 data-hero-reveal
                 className="mt-6 max-w-lg text-[17px] leading-relaxed text-text/70"
               >
-                The highest-leverage work — unblocking a teammate, catching a bug in review —
-                gets credited to whoever closed the ticket afterward. Witness finds it, and
-                confirms every finding against a second source before it counts.
+                Engineers often unblock a teammate or catch a bug in review, but the person who
+                gets credit later is whoever closed the ticket. Witness finds that hidden work
+                and gives credit where it&rsquo;s due, confirming every finding against a
+                second, independent source before it counts.
               </p>
               <div data-hero-reveal className="mt-8 flex flex-wrap items-center gap-3">
                 <a
