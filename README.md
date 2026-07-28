@@ -81,3 +81,18 @@ npm run dev
 ```
 
 Next.js 16 / React 19 / Tailwind 4, with GSAP + Lenis for scroll/animation.
+
+
+## Demo environment
+
+Witness needs a workspace where a real pattern exists: someone whose contribution is visible in Slack but invisible in the system of record. We couldn't use a real company's data, so we constructed a synthetic one.
+Setup. Three team members took personas on a fictional payments startup:
+Persona	Linear identity	Slack identity	Role in the data
+The Ghost	Ars Ray	@arsen	Closes 2 tickets. Answers everyone's questions.
+The Star	benjamin nisevich	@ben	Closes 11 tickets. Asks for help when stuck.
+The Third	Philip Nisevich	@philip	Owns payments. Closes 3 tickets.
+Each persona used a real account on both platforms, so HydraDB's entity resolution operates on genuinely distinct identifiers — a Slack user ID and a Linear user UUID with no shared key.
+Linear. 24 issues (WIT-5 through WIT-28) created via the GraphQL API, assigned unevenly: 11 to the Star, 3 to the Third, 2 to the Ghost, plus 8 left open. The resulting ledger makes the Ghost the lowest performer on the team by every dashboard metric.
+Slack. ~110 messages posted via chat.postMessage using per-user OAuth tokens, across #eng, #eng-help, and #incidents. Seven threads follow the same shape: the Ghost diagnoses a problem on a ticket assigned to someone else, and that ticket is subsequently closed by its assignee. The remaining ~90 messages are background noise generated from character briefs — standups, jokes, dead threads, a wrong answer that gets corrected.
+Ordering. Slack's API stamps messages at post time; there is no backdating. So we posted every Slack message before transitioning any Linear issue to Done. The calendar spread is compressed into an hour, but the causal ordering — diagnosis precedes resolution — is real, and that ordering is what the pipeline detects.
+Blind generation. The filler corpus was generated from behavioral descriptions of each persona, not from a specification of what the pipeline looks for. The generator was never shown the detection logic. The findings are whatever the pipeline surfaced when pointed at the connectors.
