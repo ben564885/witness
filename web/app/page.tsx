@@ -134,16 +134,12 @@ export default function Home() {
                 second, independent source before it counts.
               </p>
               <div data-hero-reveal className="mt-8">
-                <div className="mb-1.5 flex items-center gap-1.5 pl-1">
-                  <span className="font-display text-[16px] italic text-accent">Judges, click here</span>
-                  <span className="text-accent">↘</span>
-                </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <a
                     href="/demo"
                     className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
                   >
-                    See the live demo
+                    Judges click here
                     <span aria-hidden>→</span>
                   </a>
                   <a

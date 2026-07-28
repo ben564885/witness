@@ -31,7 +31,7 @@ export function Nav() {
           href="/demo"
           className="rounded-full bg-text px-3.5 py-1.5 text-sm font-medium text-white transition hover:opacity-85"
         >
-          See the live demo
+          Judges click here
         </a>
       </div>
     </header>
