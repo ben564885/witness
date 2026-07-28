@@ -63,14 +63,14 @@ h3 {
 }
 
 /*
- * Hero artwork — the ronin-and-fox illustration, anchored toward the top so
- * the tall run of koi-nobori banners against the sky fills the space the
- * headline sits in, instead of cropping down to the grass at the bottom.
+ * Hero artwork — the ronin-and-fox illustration, cropped to the band with
+ * the koi-nobori banners overhead and the figure's hat and shoulders below —
+ * not the very top of the sky, not down to the grass and fox.
  */
 .hero-art {
   background-color: #9fb3a9;
   background-image: url("/bggusethis.png");
-  background-position: center top;
+  background-position: center 32%;
   background-repeat: no-repeat;
   background-size: cover;
 }
