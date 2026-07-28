@@ -522,7 +522,7 @@
     <div class="frame">
       <p class="eyebrow">What each piece actually does</p>
       <h2>Not a features checklist.</h2>
-      <div class="stack">
+      <div class="stack" style="grid-template-columns: 1fr;">
         <div class="cell">
           <div class="name">InsForge <span class="tag">backend</span></div>
           <p>Postgres schema, the attribution engine, RLS access control, a realtime channel streaming pipeline stages live, pgvector for fuzzy reference resolution.</p>
@@ -534,10 +534,6 @@
         <div class="cell">
           <div class="name">RocketRide <span class="tag">orchestration</span></div>
           <p>Live-tested against a real Cloud account. Two real platform gaps found and documented, not guessed around.</p>
-        </div>
-        <div class="cell">
-          <div class="name">Pipeshift <span class="tag">classification</span></div>
-          <p>Evaluated for message classification, with a content-hash cache built to support it. Attribution works the same with or without it.</p>
         </div>
       </div>
     </div>
