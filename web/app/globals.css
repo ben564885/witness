@@ -63,14 +63,14 @@ h3 {
 }
 
 /*
- * Hero artwork — the ronin-and-fox illustration, cropped to the band with
- * the koi-nobori banners overhead and the figure's hat and shoulders below —
- * not the very top of the sky, not down to the grass and fox.
+ * Hero artwork — stenciled gears on grass: the mechanism under the product,
+ * literally. Landscape and evenly weighted left-to-right, so a plain center
+ * crop reads fine at any width.
  */
 .hero-art {
-  background-color: #9fb3a9;
-  background-image: url("/bggusethis.png");
-  background-position: center 32%;
+  background-color: #3f5c2f;
+  background-image: url("/gears.png");
+  background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
 }
@@ -100,14 +100,12 @@ h3 {
 }
 
 /*
- * Footer bookends the hero with the same artwork. The image anchors to its
- * top edge here (the hero anchors to the bottom), so the page opens on the
- * ground the figure walks and closes on the banners overhead. The cream wash
- * sits heavy — footer type is small and muted, and has to stay readable over
- * the busiest part of the art.
+ * Footer bookends the hero with the same artwork. The cream wash sits heavy
+ * — footer type is small and muted, and has to stay readable over the
+ * busiest part of the art.
  */
 .footer-art {
-  background-color: #9fb3a9;
+  background-color: #3f5c2f;
   background-image:
     linear-gradient(
       to bottom,
@@ -116,10 +114,10 @@ h3 {
       rgba(250, 249, 245, 0.84) 58%,
       rgba(250, 249, 245, 0.66) 100%
     ),
-    url("/bggusethis.png");
+    url("/gears.png");
   background-position:
     center top,
-    center top;
+    center;
   background-repeat: no-repeat;
   background-size:
     cover,
