@@ -82,6 +82,17 @@ npm run dev
 
 Next.js 16 / React 19 / Tailwind 4, with GSAP + Lenis for scroll/animation.
 
+### /demo — the manager-review skit
+
+`web/app/demo` is a real, live view against the backend — not mocked, unlike
+the landing page's `ToggleDemo` widget. It clones the golden harvested run
+(`DEMO_GOLDEN_RUN_ID` in `web/.env.local`, produced by `npm run sync` in
+`hydradb/`) and re-runs `confirm_attributions()` against whichever sources
+are toggled on, via a server-only API route (`web/app/api/demo/route.ts`)
+that holds the InsForge admin key so it never reaches the browser. Toggling
+Slack/GitHub/Linear off live reproduces the PRD's degradation demo end to
+end: turn off everything but Slack and every person's confirmed findings
+drop to zero with a real `degraded` banner, in the same page, no redeploy.
 
 ## Demo environment
 
