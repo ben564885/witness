@@ -23,10 +23,29 @@ POST /run { sources, window_days, confirm_window_hours }
 |---|---|
 | `migrations/` | InsForge/Postgres schema — core tables, source-scoped views, the attribution engine, RLS policies, realtime run stream, pgvector reference resolution |
 | `functions/report.ts` | Public read-only edge function: `GET /functions/report?run_id=<uuid>` returns a run's degradation status and RLS-scoped findings, independent of the orchestration pipeline being awake |
+| `functions/run.ts` | Pipeline-internal: creates a run, or clones a prior run's harvested data forward (the fast re-run path for the source-toggle demo) |
+| `functions/ingest.ts` | Pipeline-internal: identity resolution, reference extraction, and normalized writes — the one place harvested data becomes `source_event`/`ticket_state`/`identity_claim` rows |
+| `functions/confirm.ts` | Pipeline-internal: calls `confirm_attributions()`, assembles the cited response in the PRD §7 shape |
+| `hydradb/` | HydraDB REST client (live-verified against the real API — see `hydradb/client.ts`'s header for two wrong turns worth not repeating) and the harvest logic: Slack/GitHub/Linear are all pulled directly from their own APIs, with Slack additionally mirrored into HydraDB as searchable knowledge |
+| `rocketride/` | The public `POST /run` pipeline — thin by design; see `rocketride/README.md` for what's confirmed vs. still needs verification against a live account |
 | `web/` | Next.js landing page for the project |
 | `PRD.md` | MVP scope, API contract, data model, ranking formula, build schedule, demo script |
 | `PIVOT.md` | The design rationale — why attribution and access control had to move into the database |
 | `AGENTS.md` | InsForge backend setup notes for coding agents |
+
+## Running the pipeline end to end
+
+```bash
+cd hydradb
+npm install
+npm run bootstrap          # once per workspace — provisions the HydraDB database
+npm run sync -- --sources=slack,github,linear
+```
+
+`sync.ts` is a complete, RocketRide-independent run of the pipeline — useful
+for testing the harvest → ingest → confirm flow before RocketRide is wired
+up. `npm run serve` runs the same logic as an HTTP server that RocketRide's
+`run.pipe` fronts publicly; see `rocketride/README.md` for deployment.
 
 ## Backend (InsForge)
 
