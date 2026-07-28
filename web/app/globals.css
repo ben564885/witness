@@ -1,0 +1,125 @@
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+:root {
+  --bg: #faf9f5;
+  --surface: #ffffff;
+  --surface-2: #f1efe8;
+  --text: #15161a;
+  --text-muted: #6b6d73;
+  --border: #e4e1d8;
+  --accent: #0f6b4f;
+  --accent-contrast: #ffffff;
+  --ok: #2f8f5b;
+  --danger: #b8842c;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --font-display: var(--font-display);
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: light;
+  scroll-behavior: auto;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/*
+ * Hero — a faint ledger grid instead of art: rows and columns that thin out
+ * toward the right, evoking the dashboard the whole product argues against.
+ */
+.hero-art {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(to bottom, rgba(21, 22, 26, 0.05) 1px, transparent 1px),
+    linear-gradient(to right, rgba(21, 22, 26, 0.05) 1px, transparent 1px);
+  background-size: 100% 44px, 88px 100%;
+  background-position: 0 0, 0 0;
+  mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+}
+
+.hero-veil {
+  background: linear-gradient(to bottom, transparent 0%, transparent 82%, var(--bg) 100%);
+}
+
+.footer-art {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(to top, rgba(21, 22, 26, 0.05) 1px, transparent 1px),
+    linear-gradient(to right, rgba(21, 22, 26, 0.05) 1px, transparent 1px);
+  background-size: 100% 44px, 88px 100%;
+  mask-image: linear-gradient(to top, black 0%, black 60%, transparent 100%);
+}
+
+/*
+ * FAQ answers ease in instead of snapping. <details> has no transition on
+ * open, so this runs as a keyframe on the answer itself. Collapsing stays
+ * instant — that is the browser's own behaviour and animating it needs JS.
+ */
+@keyframes faq-answer-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+details[open] > .faq-answer {
+  animation: faq-answer-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
