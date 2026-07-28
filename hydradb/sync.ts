@@ -189,7 +189,20 @@ async function harvestGithub(org: string, repo: string, token: string, windowSta
     ...commits.map((c: any) => ({
       external_id: c.sha,
       kind: "commit",
-      author: identityFrom("github", c.author?.id ? String(c.author.id) : undefined, roster),
+      // Always resolve by the raw git commit email, not the linked GitHub
+      // account's org-roster lookup: two people in this demo have their
+      // commit email linked to a real (non-org-member) GitHub account,
+      // which made `identityFrom` return email:null and silently create
+      // duplicate person rows instead of matching the existing ones. The
+      // commit's own author.email is the authoritative "who made this"
+      // signal regardless of whether GitHub could link it to an account.
+      author: (() => {
+        const email: string | undefined = c.commit?.author?.email;
+        const name: string | undefined = c.commit?.author?.name;
+        const externalId = c.author?.id ? String(c.author.id) : email ? `email:${email}` : undefined;
+        if (!externalId) return null;
+        return { source: "github", external_id: externalId, handle: c.author?.login ?? null, email: email ?? null, display_name: name ?? null };
+      })(),
       ts: c.commit.author.date,
       body: c.commit.message,
       url: c.html_url,
