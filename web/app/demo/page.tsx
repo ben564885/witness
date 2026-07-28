@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Logo } from "../components/Logo";
+import { AnimatedAIChat } from "@/components/ui/animated-ai-chat";
 
 type SourceId = "slack" | "github" | "linear";
 const SOURCES: { id: SourceId; label: string }[] = [
@@ -39,6 +40,7 @@ export default function DemoPage() {
   const [result, setResult] = useState<RunResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     const sources = Array.from(enabled);
@@ -81,9 +83,11 @@ export default function DemoPage() {
 
   // Most surprising first: highest confirmed ghost work leads, the visibly
   // "safe" people (nothing hidden) trail — the reveal reads top to bottom.
-  const people = [...(result?.people ?? [])].sort(
+  const allPeople = [...(result?.people ?? [])].sort(
     (a, b) => b.invisible.confirmed_unblocks - a.invisible.confirmed_unblocks,
   );
+  const people = selected ? allPeople.filter((p) => p.person.display_name === selected) : allPeople;
+  const shortcuts = allPeople.map((p) => ({ id: p.person.display_name, name: p.person.display_name }));
 
   return (
     <div className="min-h-screen bg-bg pb-24">
@@ -101,10 +105,20 @@ export default function DemoPage() {
           Team performance, this quarter
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">
-          Three engineers, one review. Toggle sources off to see what the review would have missed.
+          Pull up a report, or review the whole team at once.
         </p>
 
+        <div className="mt-6">
+          <AnimatedAIChat
+            people={shortcuts}
+            selectedId={selected}
+            loading={loading}
+            onSelectPerson={(id) => setSelected((prev) => (prev === id ? null : id))}
+          />
+        </div>
+
         <div className="mt-6 flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px] tracking-wide text-muted uppercase">Sources</span>
           {SOURCES.map((s) => {
             const on = enabled.has(s.id);
             return (
@@ -121,7 +135,6 @@ export default function DemoPage() {
               </button>
             );
           })}
-          {loading && <span className="text-xs text-muted">re-running…</span>}
         </div>
 
         {result?.degraded.note && (
