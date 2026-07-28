@@ -32,6 +32,7 @@ interface PersonResult {
   visible: { prs: number; tickets_closed: number; commits: number };
   invisible: { confirmed_unblocks: number; reviews: number; triage: number };
   findings: Finding[];
+  helped_by: Finding[];
 }
 interface RunResult {
   run_id: string;
@@ -112,6 +113,15 @@ export default function DemoPage() {
       return next;
     });
 
+  // Every citable fact about a person, combined: things they did for someone
+  // else, and confirmed instances where a teammate unblocked them. Ensures
+  // "See evidence" has something real for everyone with any confirmed
+  // activity on either side — not just people who happen to be the helper.
+  const allEvidence = (person: PersonResult): Evidence[] => [
+    ...person.findings.flatMap((f) => f.evidence),
+    ...person.helped_by.flatMap((f) => f.evidence),
+  ];
+
   const askAboutPerson = async (personName: string) => {
     const person = allPeople.find((p) => p.person.display_name === personName);
     if (!person) return;
@@ -126,10 +136,11 @@ export default function DemoPage() {
           visible: person.visible,
           invisible: person.invisible,
           findings: person.findings.map((f) => ({ claim: f.claim })),
+          helped_by: person.helped_by.map((f) => ({ claim: f.claim })),
         }),
       });
       const data = await res.json();
-      if (res.ok) resolveLastTurn(data.insight, person.findings.flatMap((f) => f.evidence));
+      if (res.ok) resolveLastTurn(data.insight, allEvidence(person));
     } finally {
       setAiLoading(false);
     }
@@ -162,13 +173,14 @@ export default function DemoPage() {
             visible: p.visible,
             invisible: p.invisible,
             findings: p.findings.map((f) => ({ claim: f.claim })),
+            helped_by: p.helped_by.map((f) => ({ claim: f.claim })),
           })),
         }),
       });
       const data = await res.json();
       if (res.ok) {
         const person = data.person_name ? allPeople.find((p) => p.person.display_name === data.person_name) : null;
-        resolveLastTurn(data.answer, person ? person.findings.flatMap((f) => f.evidence) : []);
+        resolveLastTurn(data.answer, person ? allEvidence(person) : []);
       }
     } finally {
       setAiLoading(false);

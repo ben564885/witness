@@ -84,7 +84,7 @@ export default async function (req: Request): Promise<Response> {
 
     const { data: tickets } = await admin.database
       .from("ticket_state")
-      .select("source, ticket_key, url")
+      .select("source, ticket_key, url, assignee_person_id")
       .eq("run_id", runId);
     const ticketByKey = new Map((tickets ?? []).map((t: any) => [`${t.source}:${t.ticket_key}`, t]));
 
@@ -98,37 +98,56 @@ export default async function (req: Request): Promise<Response> {
       .eq("kind", "commit");
     const commitByExternalId = new Map((commitEvents ?? []).map((c: any) => [c.external_id, c]));
 
+    function buildEvidence(a: any): Array<{ source: string; ref: string; url: string | null; note: string }> {
+      const event = eventById.get(a.source_event_id);
+      const evidence: Array<{ source: string; ref: string; url: string | null; note: string }> = [];
+      if (event) {
+        evidence.push({ source: event.source, ref: event.external_id, url: event.url, note: "message containing the reference" });
+      }
+      if (a.rule === "a") {
+        const ticket = ticketByKey.get(`${a.ticket_source}:${a.ticket_key}`);
+        evidence.push({
+          source: a.ticket_source,
+          ref: a.ticket_key,
+          url: ticket?.url ?? null,
+          note: "assigned to someone else, closed after the message",
+        });
+      } else {
+        const commit = commitByExternalId.get(a.ticket_key);
+        evidence.push({
+          source: "github",
+          ref: a.ticket_key,
+          url: commit?.url ?? null,
+          note: "committed by someone else after the message",
+        });
+      }
+      return evidence;
+    }
+
     people = personIds.map((personId: string) => {
       const person = personById.get(personId);
-      const rank = (ranked ?? []).find((r: any) => r.person_id === personId);
       const led = ledgerByPerson.get(personId);
       const personAttribs = (attributions ?? []).filter((a: any) => a.person_id === personId);
 
-      const findings = personAttribs.map((a: any) => {
-        const event = eventById.get(a.source_event_id);
-        const evidence: Array<{ source: string; ref: string; url: string | null; note: string }> = [];
-        if (event) {
-          evidence.push({ source: event.source, ref: event.external_id, url: event.url, note: "message containing the reference" });
-        }
-        if (a.rule === "a") {
+      const findings = personAttribs.map((a: any) => ({ claim: a.reason, rule: a.rule, evidence: buildEvidence(a) }));
+
+      // The flip side of findings: confirmed instances where someone ELSE
+      // unblocked this person (rule (a)'s ticket assignee is the
+      // beneficiary). This is real, already-confirmed data — just never
+      // queried from the beneficiary's side before. Matters most for
+      // someone with zero outbound findings: they may still have been
+      // helped, and that's a citable fact, not something to leave the AI
+      // to invent when asked about them.
+      const helpedBy = (attributions ?? [])
+        .filter((a: any) => {
+          if (a.rule !== "a" || a.person_id === personId) return false;
           const ticket = ticketByKey.get(`${a.ticket_source}:${a.ticket_key}`);
-          evidence.push({
-            source: a.ticket_source,
-            ref: a.ticket_key,
-            url: ticket?.url ?? null,
-            note: "assigned to someone else, closed after the message",
-          });
-        } else {
-          const commit = commitByExternalId.get(a.ticket_key);
-          evidence.push({
-            source: "github",
-            ref: a.ticket_key,
-            url: commit?.url ?? null,
-            note: "committed by someone else after the message",
-          });
-        }
-        return { claim: a.reason, rule: a.rule, evidence };
-      });
+          return ticket?.assignee_person_id === personId;
+        })
+        .map((a: any) => {
+          const helperName = personById.get(a.person_id)?.display_name ?? "a teammate";
+          return { claim: `${helperName}: ${a.reason}`, rule: a.rule, evidence: buildEvidence(a) };
+        });
 
       return {
         person: { id: personId, display_name: person?.display_name ?? "unknown" },
@@ -139,6 +158,7 @@ export default async function (req: Request): Promise<Response> {
           triage: 0, // no message classifier in this build — see PRD P1/Pipeshift
         },
         findings,
+        helped_by: helpedBy,
       };
     });
   }

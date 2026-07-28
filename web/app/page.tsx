@@ -133,22 +133,29 @@ export default function Home() {
                 and gives credit where it&rsquo;s due, confirming every finding against a
                 second, independent source before it counts.
               </p>
-              <div data-hero-reveal className="mt-8 flex flex-wrap items-center gap-3">
-                <a
-                  href="/demo"
-                  className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
-                >
-                  See the live demo
-                </a>
-                <a
-                  href="#how-it-works"
-                  className="flex items-center gap-2 rounded-full border border-black/[0.07] bg-white/80 px-5 py-2.5 text-sm font-medium text-text shadow-sm backdrop-blur transition hover:bg-white"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current text-[9px]">
-                    ▶
-                  </span>
-                  How it works
-                </a>
+              <div data-hero-reveal className="mt-8">
+                <div className="mb-1.5 flex items-center gap-1.5 pl-1">
+                  <span className="font-display text-[16px] italic text-accent">Judges, click here</span>
+                  <span className="text-accent">↘</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href="/demo"
+                    className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+                  >
+                    See the live demo
+                    <span aria-hidden>→</span>
+                  </a>
+                  <a
+                    href="#how-it-works"
+                    className="flex items-center gap-2 rounded-full border border-black/[0.07] bg-white/80 px-5 py-2.5 text-sm font-medium text-text shadow-sm backdrop-blur transition hover:bg-white"
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current text-[9px]">
+                      ▶
+                    </span>
+                    How it works
+                  </a>
+                </div>
               </div>
             </div>
 

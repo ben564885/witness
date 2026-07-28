@@ -32,6 +32,7 @@ interface PersonSummary {
   visible: { prs: number; tickets_closed: number; commits: number };
   invisible: { confirmed_unblocks: number; reviews: number; triage: number };
   findings: { claim: string }[];
+  helped_by: { claim: string }[];
 }
 
 export default async function (req: Request): Promise<Response> {
@@ -51,7 +52,9 @@ export default async function (req: Request): Promise<Response> {
     .map(
       (p) =>
         `${p.display_name}: ${p.visible.tickets_closed} tickets closed, ${p.visible.commits} commits, ${p.visible.prs} PRs visible on dashboards; ${p.invisible.confirmed_unblocks} confirmed unblocks, ${p.invisible.reviews} reviews confirmed against a second source but invisible to those same dashboards.${
-          p.findings.length ? " Findings: " + p.findings.map((f) => f.claim).join("; ") : ""
+          p.findings.length ? " Findings (things they did for someone else): " + p.findings.map((f) => f.claim).join("; ") : ""
+        }${
+          p.helped_by?.length ? " Helped by (confirmed instances where a teammate unblocked them): " + p.helped_by.map((f) => f.claim).join("; ") : ""
         }`,
     )
     .join("\n");
@@ -68,7 +71,7 @@ export default async function (req: Request): Promise<Response> {
 
 If the question asks to identify one specific person by some criterion (e.g. "worst performer", "who closed the most tickets"), pick the single best-matching name from that exact list, judging strictly by the naive dashboard numbers (tickets/commits/PRs) — that's what the question is literally asking for.
 
-Then, MANDATORY second step: check that person's findings. If they have any, your answer MUST do all three of: (1) state the dashboard-based answer, (2) name every person they're recorded as having helped and on which ticket, using the findings text, (3) explicitly say this contradicts the dashboard-only read — a real one-line example of the shape required: "By raw ticket count, Ars Ray looks like the weakest performer — but findings show Ars personally unblocked Philip Nisevich on WIT-19 and benjamin nisevich on WIT-11, work no dashboard credits them for." Do not answer with only the dashboard numbers if findings exist; that is an incomplete answer. If the person has zero findings, just give the plain dashboard-based answer. If the question isn't about a specific person, leave person_name null and just answer normally.
+Then, MANDATORY second step: check that person's findings and helped_by. If they have findings (things THEY did for someone else), your answer MUST do all three of: (1) state the dashboard-based answer, (2) name every person they're recorded as having helped and on which ticket, using the findings text, (3) explicitly say this contradicts the dashboard-only read — a real one-line example of the shape required: "By raw ticket count, Ars Ray looks like the weakest performer — but findings show Ars personally unblocked Philip Nisevich on WIT-19 and benjamin nisevich on WIT-11, work no dashboard credits them for." If they have zero findings but DO have helped_by entries (they were unblocked by teammates, rather than unblocking others), cite that instead — name who helped them and on what, e.g. "benjamin nisevich has the strongest dashboard numbers, but that's partly because Ars Ray and Philip Nisevich each unblocked him on tickets he was stuck on — help the dashboard doesn't show either." Only fall back to a plain dashboard-only answer when both findings and helped_by are empty for that person. If the question isn't about a specific person, leave person_name null and just answer normally.
 
 Respond with strict JSON only, no markdown: {"person_name": "<exact name or null>", "answer": "<2-4 sentence answer, plain prose>"}
 
