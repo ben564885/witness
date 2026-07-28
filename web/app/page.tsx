@@ -1,6 +1,6 @@
+import { CodePanel } from "./components/CodePanel";
 import { Logo } from "./components/Logo";
 import { Nav } from "./components/Nav";
-import { TerminalWindow } from "./components/TerminalWindow";
 import { ToggleDemo } from "./components/ToggleDemo";
 import {
   CardGrid,
@@ -117,16 +117,22 @@ export default function Home() {
         <div className="hero-veil flex min-h-svh flex-col justify-center px-6 pt-36 pb-28 sm:pt-44">
           <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
             <div>
-              <h1 className="font-display text-5xl leading-[1.08] sm:text-[58px]">
+              <h1
+                data-hero-reveal
+                className="font-display text-5xl leading-[1.08] sm:text-[58px]"
+              >
                 Your engineering dashboard is{" "}
                 <span className="text-accent italic">lying to you.</span>
               </h1>
-              <p className="mt-6 max-w-lg text-[17px] leading-relaxed text-text/70">
+              <p
+                data-hero-reveal
+                className="mt-6 max-w-lg text-[17px] leading-relaxed text-text/70"
+              >
                 The highest-leverage work — unblocking a teammate, catching a bug in review —
                 gets credited to whoever closed the ticket afterward. Witness finds it, and
                 confirms every finding against a second source before it counts.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
+              <div data-hero-reveal className="mt-8 flex flex-wrap items-center gap-3">
                 <a
                   href="#proof"
                   className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
@@ -145,15 +151,21 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="min-w-0 lg:pl-4">
-              <TerminalWindow
+            <div data-hero-reveal className="min-w-0 lg:pl-4">
+              <CodePanel
+                title="POST /run"
+                badge="200 OK"
                 lines={[
-                  { text: 'POST /run {"sources":["slack","github","linear","gmail"]}' },
-                  { prompt: false, text: "→ 1 event, 1 ticket harvested" },
-                  { text: "select * from confirm_attributions(run_id)" },
-                  { prompt: false, text: "→ rule a confirmed · ENG-412 · Maria", dim: "" },
-                  { text: 'UPDATE run SET enabled_sources = \'{slack}\'' },
-                  { prompt: false, text: "→ 0 confirmed (was 1) — no redeploy" },
+                  { text: "{" },
+                  { text: '  "enabled_sources": ["slack","github","linear","gmail"],' },
+                  { text: '  "findings": [' },
+                  { text: "    {" },
+                  { text: '      "person": "Maria Okonkwo",' },
+                  { text: '      "confirmed": true,', tone: "ok" },
+                  { text: '      "evidence": ["slack:…04200","linear:ENG-412"]' },
+                  { text: "    }" },
+                  { text: "  ]" },
+                  { text: "}" },
                 ]}
               />
             </div>
@@ -218,14 +230,15 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-6 text-center">
           <h2 className="font-display text-3xl sm:text-4xl">Not a heuristic. A join.</h2>
           <div className="mx-auto mt-10 max-w-2xl text-left">
-            <TerminalWindow
+            <CodePanel
+              title="confirm_attributions()"
+              badge="rule (a)"
               lines={[
-                { prompt: false, text: "-- rule (a), from confirm_attributions()" },
-                { prompt: false, text: "JOIN visible_ticket_state(run_id) t" },
-                { prompt: false, text: "  ON t.ticket_key = ref.resolved_ticket_key" },
-                { prompt: false, text: "WHERE t.assignee_person_id <> e.author_person_id" },
-                { prompt: false, text: "  AND t.closed_at BETWEEN e.ts" },
-                { prompt: false, text: "                      AND e.ts + confirm_window_hours" },
+                { text: "JOIN visible_ticket_state(run_id) t" },
+                { text: "  ON t.ticket_key = ref.resolved_ticket_key" },
+                { text: "WHERE t.assignee_person_id <> e.author_person_id" },
+                { text: "  AND t.closed_at BETWEEN e.ts" },
+                { text: "                      AND e.ts + confirm_window_hours" },
               ]}
             />
           </div>

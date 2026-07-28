@@ -12,8 +12,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  * or late. So Lenis runs off the GSAP ticker (autoRaf: false) and pushes every
  * scroll into ScrollTrigger.update.
  *
- * Also wires the page-wide reveal: anything marked [data-reveal] rises into
- * place as it enters. Doing it here keeps page.tsx a server component.
+ * Also wires two reveal systems. [data-reveal] rises into place as each
+ * section scrolls into view — that's fine for content below the fold, but the
+ * hero is visible at load, so a scroll trigger on it would just fire
+ * immediately with no visible stagger. [data-hero-reveal] instead animates in
+ * on mount, staggered, so the headline, copy, buttons, and panel arrive in
+ * sequence rather than all at once. Doing it here keeps page.tsx a server
+ * component.
  */
 export function SmoothScroll() {
   useEffect(() => {
@@ -39,9 +44,27 @@ export function SmoothScroll() {
       });
     });
 
+    const heroCtx = gsap.context(() => {
+      const targets = gsap.utils.toArray<HTMLElement>("[data-hero-reveal]");
+      if (!targets.length) return;
+
+      gsap.set(targets, { opacity: 0, y: reduced ? 0 : 18 });
+      gsap.to(targets, {
+        opacity: 1,
+        y: 0,
+        duration: reduced ? 0 : 0.7,
+        ease: "power3.out",
+        stagger: reduced ? 0 : 0.12,
+        delay: reduced ? 0 : 0.1,
+      });
+    });
+
     if (reduced) {
       ScrollTrigger.refresh();
-      return () => revealCtx.revert();
+      return () => {
+        revealCtx.revert();
+        heroCtx.revert();
+      };
     }
 
     const lenis = new Lenis({
@@ -65,6 +88,7 @@ export function SmoothScroll() {
       gsap.ticker.lagSmoothing(500, 33);
       lenis.destroy();
       revealCtx.revert();
+      heroCtx.revert();
     };
   }, []);
 
