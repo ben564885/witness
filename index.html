@@ -54,7 +54,13 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   body {
     background: var(--bg);
     color: var(--ink);
@@ -63,25 +69,33 @@
   }
 
   .deck {
-    scroll-snap-type: y proximity;
-    overflow-y: auto;
     height: 100vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .deck { scroll-behavior: auto; }
-  }
-  .deck { scroll-behavior: smooth; }
 
   section.slide {
-    scroll-snap-align: start;
-    min-height: 100vh;
+    position: absolute;
+    inset: 0;
+    height: 100vh;
     width: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
     padding: clamp(28px, 6vw, 96px);
-    border-bottom: 1px solid var(--rule);
-    position: relative;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  section.slide.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    section.slide { transition: none; }
   }
 
   .frame {
@@ -165,17 +179,31 @@
     border-left: 2px solid var(--accent);
     padding-left: 16px;
   }
-  .scrolldown {
+  .navhint {
     position: absolute;
     bottom: 32px;
     left: clamp(28px, 6vw, 96px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-family: ui-monospace, monospace;
     font-size: 11px;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ink-soft);
-    opacity: 0.7;
+    opacity: 0.85;
   }
+  .navhint kbd {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    border: 1px solid var(--rule);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    padding: 2px 6px;
+    background: var(--bg-raised);
+    color: var(--ink);
+  }
+  .navhint .sep { color: var(--rule); }
 
   /* stat/definition rows */
   .rows { margin-top: 32px; display: flex; flex-direction: column; }
@@ -391,7 +419,12 @@
       <h1>Findings,<br>not scores.</h1>
       <p class="tagline">Performance reviews miss the work that happens in Slack. Witness finds it, and cites the proof.</p>
     </div>
-    <div class="scrolldown">Scroll ↓</div>
+    <div class="navhint">
+      <span><kbd>←</kbd> <kbd>→</kbd></span>
+      <span class="sep">or</span>
+      <span><kbd>space</kbd></span>
+      <span class="sep">to navigate — scrolling does nothing</span>
+    </div>
   </section>
 
   <section class="slide" id="s-problem">
@@ -553,28 +586,55 @@
   (function () {
     var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
     var nav = document.getElementById('navdots');
-    slides.forEach(function (s, i) {
+    var current = 0;
+
+    var dots = slides.map(function (s, i) {
       var b = document.createElement('button');
       b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
-      b.addEventListener('click', function () {
-        s.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      b.addEventListener('click', function () { goTo(i); });
       nav.appendChild(b);
+      return b;
     });
-    var dots = Array.prototype.slice.call(nav.children);
-    if ('IntersectionObserver' in window) {
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          var idx = slides.indexOf(entry.target);
-          if (entry.isIntersecting) {
-            dots.forEach(function (d, i) {
-              d.setAttribute('aria-current', i === idx ? 'true' : 'false');
-            });
-          }
-        });
-      }, { threshold: 0.5 });
-      slides.forEach(function (s) { io.observe(s); });
+
+    function goTo(index) {
+      if (index < 0 || index >= slides.length || index === current) return;
+      slides[current].classList.remove('is-active');
+      dots[current].removeAttribute('aria-current');
+      current = index;
+      slides[current].classList.add('is-active');
+      dots[current].setAttribute('aria-current', 'true');
     }
+
+    function next() { goTo(current + 1); }
+    function prev() { goTo(current - 1); }
+
+    slides[0].classList.add('is-active');
+    dots[0].setAttribute('aria-current', 'true');
+
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') {
+        e.preventDefault(); next();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault(); prev();
+      } else if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        e.shiftKey ? prev() : next();
+      } else if (e.key === 'Home') {
+        e.preventDefault(); goTo(0);
+      } else if (e.key === 'End') {
+        e.preventDefault(); goTo(slides.length - 1);
+      }
+    });
+
+    // Click anywhere on a slide (that isn't a link) advances to the next one.
+    document.getElementById('deck').addEventListener('click', function (e) {
+      if (e.target.closest('a')) return;
+      next();
+    });
+
+    // Scrolling and touch swipes are inert by design — navigation is keys/space/click only.
+    window.addEventListener('wheel', function (e) { e.preventDefault(); }, { passive: false });
+    window.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
   })();
 </script>
 
