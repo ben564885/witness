@@ -65,53 +65,81 @@ export function ToggleDemo() {
         })}
       </div>
 
-      <p className="mt-3 text-center font-mono text-xs text-muted">
-        this is the real source toggle — same run id, same seeded fixture, no redeploy between clicks
+      <p className="mt-3 text-center text-xs text-muted">
+        This is the real thing — same finding, same data. Turn a source off and watch it react.
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-border bg-[#0d0e11] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.5)]">
-        <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-2.5">
+      <div className="mt-6 rounded-xl border border-border bg-surface p-5 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.18)] sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-text">
+              MO
+            </span>
+            <div>
+              <p className="text-[14px] font-medium text-text">Maria Okonkwo</p>
+              <p className="text-[11px] text-muted">this run</p>
+            </div>
+          </div>
           <span
-            className={`h-2.5 w-2.5 rounded-full ${confirmed ? "bg-[#3fb37f]" : "bg-[#e0b341]"}`}
-          />
-          <span className="ml-1 truncate font-mono text-[12px] text-[#8b8d92]">
-            run 91e78ad5 · Maria Okonkwo
+            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              confirmed ? "bg-accent/15 text-accent" : "bg-[#b8842c]/15 text-[#b8842c]"
+            }`}
+          >
+            {confirmed ? "Confirmed" : "Unconfirmed"}
           </span>
         </div>
 
-        <div className="p-5 sm:p-6">
+        <div className="mt-5">
           {confirmed ? (
             <>
-              <p className="font-mono text-[13px] text-[#3fb37f]">confirmed · rule a</p>
-              <p className="mt-2 text-[14px] leading-relaxed text-[#d8d9dc]">
-                Unblocked Chen on <span className="font-mono text-white">ENG-412</span> — the
-                Slack message referencing it landed 2h14m before the ticket, assigned to Chen,
-                closed.
+              <p className="text-[15px] leading-relaxed text-text">
+                Unblocked <span className="font-medium">Chen</span> on{" "}
+                <span className="font-medium">ENG-412</span> — her Slack message landed two
+                hours before the ticket closed.
               </p>
-              <div className="mt-4 space-y-1.5 font-mono text-[12px] text-[#8b8d92]">
-                <p>→ slack · 1721847293.004200</p>
-                <p>→ linear · ENG-412 · assignee: Chen · closed +2h14m</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="flex items-center gap-1.5 rounded-full border border-border bg-surface-2/60 px-3 py-1 text-[12px] text-muted">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#611f69] text-[9px] font-semibold text-white">
+                    S
+                  </span>
+                  Slack message
+                </span>
+                <span className="flex items-center gap-1.5 rounded-full border border-border bg-surface-2/60 px-3 py-1 text-[12px] text-muted">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#5e6ad2] text-[9px] font-semibold text-white">
+                    L
+                  </span>
+                  Linear ticket
+                </span>
               </div>
             </>
           ) : (
             <>
-              <p className="font-mono text-[13px] text-[#e0b341]">unconfirmed · degraded</p>
-              <p className="mt-2 text-[14px] leading-relaxed text-[#d8d9dc]">
+              <p className="text-[15px] leading-relaxed text-text">
                 {aAvailable
-                  ? "Linear is off — there is no ticket left to confirm against, not a branch that decided to skip it."
-                  : "No ticket or commit source is enabled at all."}{" "}
-                A single-connector tool would now describe Maria as a low contributor.
+                  ? "Linear is off, so there's no ticket left to check this against — the rule isn't skipping it, it just has nothing to check."
+                  : "No ticket or commit source is turned on at all."}{" "}
+                A single-connector tool would now call Maria a low contributor.
               </p>
-              <p className="mt-4 font-mono text-[12px] text-[#8b8d92]">
-                → 0 confirmed attributions (was 1)
-              </p>
+              <p className="mt-3 text-[13px] text-muted">0 confirmed findings, down from 1.</p>
             </>
           )}
+        </div>
 
-          <div className="mt-5 rounded-lg bg-white/[0.04] p-3 font-mono text-[11px] leading-relaxed text-[#8b8d92]">
-            <span className="text-[#5b5d63]">degraded: </span>
-            {"{"} rule_a: {aAvailable ? "true" : "false"}, rule_b: {bAvailable ? "true" : "false"} {"}"}
-          </div>
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] ${
+              aAvailable ? "bg-accent/10 text-accent" : "bg-surface-2 text-muted"
+            }`}
+          >
+            {aAvailable ? "✓" : "—"} Can check for unblocks
+          </span>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] ${
+              bAvailable ? "bg-accent/10 text-accent" : "bg-surface-2 text-muted"
+            }`}
+          >
+            {bAvailable ? "✓" : "—"} Can check for reviews
+          </span>
         </div>
       </div>
     </div>

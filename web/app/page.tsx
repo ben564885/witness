@@ -1,4 +1,3 @@
-import { CodePanel } from "./components/CodePanel";
 import { LiveReveal } from "./components/LiveReveal";
 import { Logo } from "./components/Logo";
 import { Nav } from "./components/Nav";
@@ -212,26 +211,34 @@ export default function Home() {
         </div>
       </section>
 
-      {/* The actual join */}
+      {/* The actual rule */}
       <section data-reveal className="py-10">
         <div className="mx-auto max-w-6xl px-6 text-center">
-          <h2 className="font-display text-3xl sm:text-4xl">Not a heuristic. A join.</h2>
-          <div className="mx-auto mt-10 max-w-2xl text-left">
-            <CodePanel
-              title="confirm_attributions()"
-              badge="rule (a)"
-              lines={[
-                { text: "JOIN visible_ticket_state(run_id) t" },
-                { text: "  ON t.ticket_key = ref.resolved_ticket_key" },
-                { text: "WHERE t.assignee_person_id <> e.author_person_id" },
-                { text: "  AND t.closed_at BETWEEN e.ts" },
-                { text: "                      AND e.ts + confirm_window_hours" },
-              ]}
-            />
+          <h2 className="font-display text-3xl sm:text-4xl">Not a guess. A rule.</h2>
+          <p className="mx-auto mt-3 max-w-md text-[15px] text-muted">
+            Every finding has to clear the same three conditions. If a source is turned off,
+            one of them simply can&rsquo;t be checked anymore.
+          </p>
+
+          <div className="mx-auto mt-8 max-w-lg rounded-xl border border-border bg-surface p-6 text-left shadow-sm">
+            <ol className="space-y-4">
+              {[
+                "The message names a specific ticket.",
+                "That ticket is assigned to someone else.",
+                "It closed within the time window after the message.",
+              ].map((step, i) => (
+                <li key={step} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[12px] font-semibold text-accent">
+                    {i + 1}
+                  </span>
+                  <span className="text-[15px] leading-snug text-text">{step}</span>
+                </li>
+              ))}
+            </ol>
           </div>
+
           <p className="mx-auto mt-4 max-w-md text-sm text-muted">
-            visible_ticket_state is gated on the run's enabled_sources. That's the whole
-            degradation mechanism — no separate code path to trust.
+            All three, every time, no exceptions built in for the demo.
           </p>
         </div>
       </section>
