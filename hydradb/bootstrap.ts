@@ -7,7 +7,10 @@
 // HydraDB as knowledge via client.ingestKnowledge(). See client.ts's header
 // comment for how this was determined (two wrong turns, both live-tested).
 
-import "dotenv/config";
+import { config } from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env.local") });
 import { HydraDBClient } from "./client.ts";
 
 async function main() {

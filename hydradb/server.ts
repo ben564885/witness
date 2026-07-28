@@ -7,7 +7,10 @@
 //     -H 'Authorization: Bearer <ROCKETRIDE_AUTH>' \
 //     -d '{"sources":["slack","github","linear"]}'
 
-import "dotenv/config";
+import { config } from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env.local") });
 import http from "node:http";
 import { runHarvest } from "./sync.ts";
 

@@ -19,7 +19,10 @@
 //   npm run sync -- --sources=slack,github,linear --window-days=30 --confirm-window-hours=48
 //   npm run sync -- --sources=slack --clone-from=<run_id>   # fast re-run, no re-harvest
 
-import "dotenv/config";
+import { config } from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env.local") });
 import { HydraDBClient } from "./client.ts";
 import { fetchSlackUsers, fetchGithubUsers, fetchLinearUsers, indexByExternalId, type RosterEntry } from "./identity.ts";
 
@@ -268,9 +271,14 @@ export async function runHarvest(opts: HarvestOptions): Promise<unknown> {
 
   // Bounded fan-out: the three sources harvest concurrently rather than in
   // sequence — this is the "real pipeline work" PRD §6 assigns to RocketRide,
-  // now expressed as plain Promise.all now that there's no Pipeshift
+  // now expressed as plain concurrent promises now that there's no Pipeshift
   // classification step left to fan out over.
-  await Promise.all([
+  //
+  // allSettled, not all: one source failing (bad token, repo the token can't
+  // see, rate limit) must not discard the other two sources' work. This was
+  // a real bug, caught live — a GitHub 404 killed a run whose Slack and
+  // Linear harvests were otherwise in flight and would have succeeded.
+  const results = await Promise.allSettled([
     sources.includes("slack") && env("SLACK_BOT_TOKEN", false)
       ? harvestSlack(env("SLACK_BOT_TOKEN"), windowStart, indexByExternalId(slackRoster), hydra).then((events) =>
           callFunction("ingest", { run_id: run.run_id, source: "slack", events, tickets: [] }).then((r) =>
@@ -278,7 +286,7 @@ export async function runHarvest(opts: HarvestOptions): Promise<unknown> {
           ),
         )
       : Promise.resolve(),
-    sources.includes("github")
+    sources.includes("github") && env("GITHUB_TOKEN", false)
       ? harvestGithub(env("GITHUB_ORG"), env("GITHUB_REPO"), env("GITHUB_TOKEN"), windowStart, indexByExternalId(githubRoster)).then(
           ({ events, tickets }) =>
             callFunction("ingest", { run_id: run.run_id, source: "github", events, tickets }).then((r) =>
@@ -286,7 +294,7 @@ export async function runHarvest(opts: HarvestOptions): Promise<unknown> {
             ),
         )
       : Promise.resolve(),
-    sources.includes("linear")
+    sources.includes("linear") && env("LINEAR_API_KEY", false)
       ? harvestLinear(env("LINEAR_API_KEY"), env("LINEAR_TEAM_KEY", false), windowStart, indexByExternalId(linearRoster)).then((tickets) =>
           callFunction("ingest", { run_id: run.run_id, source: "linear", events: [], tickets }).then((r) =>
             console.log(`[linear] ${r.tickets_ingested} tickets`),
@@ -294,6 +302,14 @@ export async function runHarvest(opts: HarvestOptions): Promise<unknown> {
         )
       : Promise.resolve(),
   ]);
+
+  const labels = ["slack", "github", "linear"];
+  const failures = results
+    .map((r, i) => ({ label: labels[i], result: r }))
+    .filter((x) => x.result.status === "rejected");
+  for (const f of failures) {
+    console.error(`[${f.label}] harvest failed (other sources still ingested): ${(f.result as PromiseRejectedResult).reason}`);
+  }
 
   return callFunction("confirm", { run_id: run.run_id });
 }
