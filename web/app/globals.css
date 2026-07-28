@@ -63,14 +63,15 @@ h3 {
 }
 
 /*
- * Hero artwork — stenciled gears on grass: the mechanism under the product,
- * literally. Landscape and evenly weighted left-to-right, so a plain center
- * crop reads fine at any width.
+ * Hero artwork — a robot patiently letting a bird land in its hand. Source
+ * file had letterbox bars baked in; those are cropped out (see git history),
+ * not hidden by CSS. Positioned right-of-center so the robot-and-bird pair
+ * sits nearer the terminal panel, not directly behind the headline.
  */
 .hero-art {
-  background-color: #3f5c2f;
-  background-image: url("/gears.png");
-  background-position: center;
+  background-color: #79c1e8;
+  background-image: url("/usethisthis.png");
+  background-position: 65% center;
   background-repeat: no-repeat;
   background-size: cover;
 }
@@ -105,7 +106,7 @@ h3 {
  * busiest part of the art.
  */
 .footer-art {
-  background-color: #3f5c2f;
+  background-color: #79c1e8;
   background-image:
     linear-gradient(
       to bottom,
@@ -114,7 +115,7 @@ h3 {
       rgba(250, 249, 245, 0.84) 58%,
       rgba(250, 249, 245, 0.66) 100%
     ),
-    url("/gears.png");
+    url("/usethisthis.png");
   background-position:
     center top,
     center;
