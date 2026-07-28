@@ -1,4 +1,5 @@
 import { CodePanel } from "./components/CodePanel";
+import { LiveReveal } from "./components/LiveReveal";
 import { Logo } from "./components/Logo";
 import { Nav } from "./components/Nav";
 import { ToggleDemo } from "./components/ToggleDemo";
@@ -152,22 +153,7 @@ export default function Home() {
             </div>
 
             <div data-hero-reveal className="min-w-0 lg:pl-4">
-              <CodePanel
-                title="POST /run"
-                badge="200 OK"
-                lines={[
-                  { text: "{" },
-                  { text: '  "enabled_sources": ["slack","github","linear","gmail"],' },
-                  { text: '  "findings": [' },
-                  { text: "    {" },
-                  { text: '      "person": "Maria Okonkwo",' },
-                  { text: '      "confirmed": true,', tone: "ok" },
-                  { text: '      "evidence": ["slack:…04200","linear:ENG-412"]' },
-                  { text: "    }" },
-                  { text: "  ]" },
-                  { text: "}" },
-                ]}
-              />
+              <LiveReveal />
             </div>
           </div>
         </div>
