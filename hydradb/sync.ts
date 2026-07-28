@@ -237,14 +237,31 @@ async function harvestLinear(apiKey: string, teamKey: string | undefined, window
   const data = await res.json();
   if (data.errors) throw new Error(`Linear issues query failed: ${JSON.stringify(data.errors)}`);
 
-  const tickets = (data.data?.issues?.nodes ?? []).map((issue: any) => ({
+  const issues = data.data?.issues?.nodes ?? [];
+  const tickets = issues.map((issue: any) => ({
     ticket_key: issue.identifier,
     assignee: identityFrom("linear", issue.assignee?.id, roster),
     status: issue.state?.name ?? null,
     closed_at: issue.completedAt ?? issue.canceledAt ?? null,
     url: issue.url,
   }));
-  return tickets;
+
+  // person_ledger's visible "tickets_closed" count reads source_event(kind =
+  // 'ticket_closed'), not ticket_state — ticket_state alone only feeds the
+  // temporal join. Without this, every visible ledger shows 0 tickets closed
+  // regardless of how much Linear activity actually happened.
+  const events = issues
+    .filter((issue: any) => issue.completedAt)
+    .map((issue: any) => ({
+      external_id: issue.identifier,
+      kind: "ticket_closed",
+      author: identityFrom("linear", issue.assignee?.id, roster),
+      ts: issue.completedAt,
+      body: null,
+      url: issue.url,
+    }));
+
+  return { events, tickets };
 }
 
 export interface HarvestOptions {
@@ -308,10 +325,11 @@ export async function runHarvest(opts: HarvestOptions): Promise<unknown> {
         )
       : Promise.resolve(),
     sources.includes("linear") && env("LINEAR_API_KEY", false)
-      ? harvestLinear(env("LINEAR_API_KEY"), env("LINEAR_TEAM_KEY", false), windowStart, indexByExternalId(linearRoster)).then((tickets) =>
-          callFunction("ingest", { run_id: run.run_id, source: "linear", events: [], tickets }).then((r) =>
-            console.log(`[linear] ${r.tickets_ingested} tickets`),
-          ),
+      ? harvestLinear(env("LINEAR_API_KEY"), env("LINEAR_TEAM_KEY", false), windowStart, indexByExternalId(linearRoster)).then(
+          ({ events, tickets }) =>
+            callFunction("ingest", { run_id: run.run_id, source: "linear", events, tickets }).then((r) =>
+              console.log(`[linear] ${r.events_ingested} ticket-closed events, ${r.tickets_ingested} tickets`),
+            ),
         )
       : Promise.resolve(),
   ]);

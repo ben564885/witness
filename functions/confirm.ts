@@ -57,10 +57,12 @@ export default async function (req: Request): Promise<Response> {
   const { data: ledger } = await admin.database.rpc("person_ledger", { p_run_id: runId });
   const ledgerByPerson = new Map((ledger ?? []).map((l: any) => [l.person_id, l]));
 
-  // Only people with at least one confirmed attribution belong in a "ghost
-  // work" findings response — rank_divergence also includes purely-visible
-  // people (confirmed_count 0) since it's a full outer join against the ledger.
-  const personIds = (ranked ?? []).filter((r: any) => r.confirmed_count >= 1).map((r: any) => r.person_id);
+  // Every person with any visible or invisible signal — the demo's "here's
+  // the dashboard, here's what it's missing" contrast needs the full roster,
+  // not just people who happen to have confirmed ghost work. Findings is
+  // simply empty for anyone with confirmed_count 0. divergence itself is
+  // still never included in the response (PRD §9's "never render the number").
+  const personIds = (ranked ?? []).map((r: any) => r.person_id);
   let people: any[] = [];
 
   if (personIds.length > 0) {
