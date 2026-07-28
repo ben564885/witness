@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "../components/Logo";
 import { AnimatedAIChat } from "@/components/ui/animated-ai-chat";
 import { SiGithub, SiLinear } from "react-icons/si";
 import { FaSlack } from "react-icons/fa";
+import { SendIcon } from "lucide-react";
 import type { IconType } from "react-icons";
 
 type SourceId = "slack" | "github" | "linear";
@@ -39,21 +40,23 @@ interface RunResult {
   people: PersonResult[];
 }
 
+interface ChatTurn {
+  question: string;
+  answer: string | null; // null while that turn's answer is loading
+  evidence: Evidence[];
+}
+
 export default function DemoPage() {
   const [enabled, setEnabled] = useState<Set<SourceId>>(new Set(["slack", "github", "linear"]));
   const [result, setResult] = useState<RunResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [aiText, setAiText] = useState<string | null>(null);
+  // The whole conversation, oldest first. Present (length > 0) is what puts
+  // the page in chat mode — a real multi-turn thread, not a single Q&A.
+  const [messages, setMessages] = useState<ChatTurn[]>([]);
+  const [openEvidence, setOpenEvidence] = useState<Set<number>>(new Set());
+  const [followUp, setFollowUp] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [lastQuestion, setLastQuestion] = useState<string | null>(null);
-  const [showEvidence, setShowEvidence] = useState(false);
-  // Set the instant a question is submitted or a name is picked — not once
-  // the answer comes back — so the input disappears immediately, not after
-  // the AI round trip.
-  const [chatModeActive, setChatModeActive] = useState(false);
-  const skipNextAutoInsight = useRef(false);
 
   useEffect(() => {
     const sources = Array.from(enabled);
@@ -85,63 +88,67 @@ export default function DemoPage() {
     };
   }, [enabled]);
 
-  const toggle = (id: SourceId) => {
-    setEnabled((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   // Most surprising first: highest confirmed ghost work leads, the visibly
   // "safe" people (nothing hidden) trail — the reveal reads top to bottom.
   const allPeople = [...(result?.people ?? [])].sort(
     (a, b) => b.invisible.confirmed_unblocks - a.invisible.confirmed_unblocks,
   );
-  const people = selected ? allPeople.filter((p) => p.person.display_name === selected) : allPeople;
   const shortcuts = allPeople.map((p) => ({ id: p.person.display_name, name: p.person.display_name }));
-  // Everything backing the AI's claim about the selected person — the "see
-  // evidence" toggle shows exactly the citations the answer is grounded in.
-  const evidenceForSelected = people.length === 1 ? people[0].findings.flatMap((f) => f.evidence) : [];
 
-  // Once a question's been asked, the chat is the only thing on screen — no
-  // input, no toggles, no cards — until this resets back to the overview.
-  // Set the instant the question is submitted (not once the answer arrives)
-  // via chatModeActive, so the input disappears immediately.
-  const chatMode = chatModeActive;
+  // Present once the first message lands — chat is the only thing on screen
+  // (no input, no toggles) until resetToOverview clears the conversation.
+  const chatMode = messages.length > 0;
   const resetToOverview = () => {
-    setChatModeActive(false);
-    setSelected(null);
-    setAiText(null);
-    setLastQuestion(null);
-    setShowEvidence(false);
+    setMessages([]);
+    setOpenEvidence(new Set());
+    setFollowUp("");
   };
 
-  const selectPerson = (id: string | null) => {
-    if (!id) return;
-    setSelected(id);
-    setChatModeActive(true);
-    setAiText(null);
-    setLastQuestion(null);
-    setShowEvidence(false);
+  const appendTurn = (question: string) => setMessages((prev) => [...prev, { question, answer: null, evidence: [] }]);
+  const resolveLastTurn = (answer: string, evidence: Evidence[]) =>
+    setMessages((prev) => {
+      const next = [...prev];
+      next[next.length - 1] = { ...next[next.length - 1], answer, evidence };
+      return next;
+    });
+
+  const askAboutPerson = async (personName: string) => {
+    const person = allPeople.find((p) => p.person.display_name === personName);
+    if (!person) return;
+    appendTurn(`Tell me about ${personName}`);
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/insight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: person.person.display_name,
+          visible: person.visible,
+          invisible: person.invisible,
+          findings: person.findings.map((f) => ({ claim: f.claim })),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) resolveLastTurn(data.insight, person.findings.flatMap((f) => f.evidence));
+    } finally {
+      setAiLoading(false);
+    }
   };
 
-  // Exact-name match is free and instant; anything else (a real question,
-  // e.g. "who's my worst performer") goes to the AI query route, which
-  // resolves it against the actual team data and never invents a person.
-  const handleQuery = async (query: string) => {
+  // Exact-name match is free and instant; anything else (a real question, or
+  // a follow-up like "why doesn't he get credit for it") goes to the AI
+  // query route with the recent conversation for context, resolved against
+  // the actual team data — never invents a person.
+  const askQuestion = async (query: string) => {
     const lower = query.toLowerCase();
     const match = allPeople.find((p) => p.person.display_name.toLowerCase().includes(lower));
     if (match) {
-      selectPerson(match.person.display_name);
+      await askAboutPerson(match.person.display_name);
       return;
     }
     if (allPeople.length === 0) return;
-    setChatModeActive(true);
-    setLastQuestion(query);
-    setShowEvidence(false);
-    setAiText(null);
+    const history = messages.slice(-3).map((m) => ({ question: m.question, answer: m.answer }));
+    appendTurn(query);
     setAiLoading(true);
     try {
       const res = await fetch("/api/ask", {
@@ -149,6 +156,7 @@ export default function DemoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query,
+          history,
           people: allPeople.map((p) => ({
             display_name: p.person.display_name,
             visible: p.visible,
@@ -158,53 +166,30 @@ export default function DemoPage() {
         }),
       });
       const data = await res.json();
-      if (res.ok && data.person_name) {
-        skipNextAutoInsight.current = true;
-        setSelected(data.person_name);
-        setAiText(data.answer);
+      if (res.ok) {
+        const person = data.person_name ? allPeople.find((p) => p.person.display_name === data.person_name) : null;
+        resolveLastTurn(data.answer, person ? person.findings.flatMap((f) => f.evidence) : []);
       }
     } finally {
       setAiLoading(false);
     }
   };
 
-  // Auto-generate the generic per-person insight whenever a single person is
-  // selected by name (button or exact match) — skipped when the selection
-  // just came from handleQuery, which already set a question-specific answer.
-  useEffect(() => {
-    if (!selected || people.length !== 1) return;
-    if (skipNextAutoInsight.current) {
-      skipNextAutoInsight.current = false;
-      return;
-    }
-    const person = people[0];
-    let cancelled = false;
-    setLastQuestion(`Tell me about ${person.person.display_name}`);
-    setShowEvidence(false);
-    setAiLoading(true);
-    setAiText(null);
-    fetch("/api/insight", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        display_name: person.person.display_name,
-        visible: person.visible,
-        invisible: person.invisible,
-        findings: person.findings.map((f) => ({ claim: f.claim })),
-      }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!cancelled && res.ok) setAiText(data.insight);
-      })
-      .finally(() => {
-        if (!cancelled) setAiLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, result?.run_id]);
+  const submitFollowUp = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = followUp.trim();
+    if (!query || aiLoading) return;
+    setFollowUp("");
+    askQuestion(query);
+  };
+
+  const toggleEvidence = (index: number) =>
+    setOpenEvidence((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
 
   return (
     <div className="min-h-screen bg-bg pb-24">
@@ -228,53 +213,83 @@ export default function DemoPage() {
       </header>
 
       {chatMode ? (
-        <main className="mx-auto mt-10 max-w-2xl px-6">
-          <div className="space-y-3">
-            <div className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-tr-md bg-text px-4 py-2.5 text-[14px] text-white">
-                {lastQuestion}
-              </div>
-            </div>
+        <>
+          <main className="mx-auto mt-10 max-w-2xl px-6 pb-28">
+            <div className="space-y-6">
+              {messages.map((turn, i) => (
+                <div key={i} className="space-y-3">
+                  <div className="flex justify-end">
+                    <div className="max-w-[85%] rounded-2xl rounded-tr-md bg-text px-4 py-2.5 text-[14px] text-white">
+                      {turn.question}
+                    </div>
+                  </div>
 
-            <div className="flex items-start gap-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-white">
-                W
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-border bg-surface px-4 py-2.5 text-[14px] leading-relaxed text-text shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]">
-                  {aiLoading && !aiText ? <span className="text-muted">Thinking…</span> : aiText}
+                  <div className="flex items-start gap-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-white">
+                      W
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-border bg-surface px-4 py-2.5 text-[14px] leading-relaxed text-text shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]">
+                        {turn.answer === null ? <span className="text-muted">Thinking…</span> : turn.answer}
+                      </div>
+
+                      {turn.answer !== null && (
+                        <div className="mt-2 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => navigator.clipboard.writeText(turn.answer!)}
+                            className="text-xs text-muted transition hover:text-text"
+                          >
+                            Copy
+                          </button>
+                          {turn.evidence.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleEvidence(i)}
+                              className="text-xs font-medium text-accent hover:underline"
+                            >
+                              {openEvidence.has(i) ? "Hide evidence" : "See evidence"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {turn.answer !== null && openEvidence.has(i) && turn.evidence.length > 0 && (
+                        <div className="mt-2 max-w-[85%]">
+                          <EvidenceBadges evidence={turn.evidence} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-
-                {aiText && (
-                  <div className="mt-2 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => navigator.clipboard.writeText(aiText)}
-                      className="text-xs text-muted transition hover:text-text"
-                    >
-                      Copy
-                    </button>
-                    {evidenceForSelected.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowEvidence((v) => !v)}
-                        className="text-xs font-medium text-accent hover:underline"
-                      >
-                        {showEvidence ? "Hide evidence" : "See evidence"}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {aiText && showEvidence && evidenceForSelected.length > 0 && (
-                  <div className="mt-2 max-w-[85%]">
-                    <EvidenceBadges evidence={evidenceForSelected} />
-                  </div>
-                )}
-              </div>
+              ))}
             </div>
-          </div>
-        </main>
+          </main>
+
+          <form
+            onSubmit={submitFollowUp}
+            className="fixed inset-x-0 bottom-6 flex justify-center px-6"
+          >
+            <div className="flex w-full max-w-xl items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)]">
+              <input
+                value={followUp}
+                onChange={(e) => setFollowUp(e.target.value)}
+                placeholder="Ask a follow-up…"
+                className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-muted"
+                style={{ outline: "none" }}
+              />
+              <button
+                type="submit"
+                disabled={!followUp.trim() || aiLoading}
+                className={`flex shrink-0 items-center justify-center rounded-full p-2 transition ${
+                  followUp.trim() && !aiLoading ? "bg-text text-white" : "bg-surface-2 text-muted"
+                }`}
+              >
+                <SendIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </form>
+        </>
       ) : (
         <main className="mx-auto mt-10 max-w-4xl px-6">
           <h1 className="font-display text-4xl leading-[1.1] text-text sm:text-[42px]">
@@ -287,33 +302,11 @@ export default function DemoPage() {
           <div className="mt-6">
             <AnimatedAIChat
               people={shortcuts}
-              selectedId={selected}
+              selectedId={null}
               loading={loading}
-              onSelectPerson={selectPerson}
-              onQuery={handleQuery}
+              onSelectPerson={askAboutPerson}
+              onQuery={askQuestion}
             />
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[11px] tracking-wide text-muted uppercase">Sources</span>
-            {SOURCES.map((s) => {
-              const on = enabled.has(s.id);
-              const Icon = s.icon;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => toggle(s.id)}
-                  aria-pressed={on}
-                  className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
-                    on ? "border-accent bg-accent text-white" : "border-border bg-surface text-muted hover:text-text"
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {s.label}
-                </button>
-              );
-            })}
           </div>
 
           {loading && (
@@ -323,7 +316,7 @@ export default function DemoPage() {
                 return (
                   <span key={s.id} className="flex items-center gap-1.5 text-xs text-muted">
                     <Icon className="h-3.5 w-3.5 animate-pulse" style={{ color: s.color }} />
-                    Checking {s.label}
+                    Checks {s.label}
                   </span>
                 );
               })}
@@ -340,94 +333,7 @@ export default function DemoPage() {
               {error}
             </div>
           )}
-
-          <div className="mt-8 space-y-5">
-            {people.length === 0 && !loading && !error && (
-              <p className="text-sm text-muted">No sources enabled — nothing to review.</p>
-            )}
-            {people.map((p) => (
-              <PersonCard key={p.person.id} person={p} />
-            ))}
-          </div>
         </main>
-      )}
-    </div>
-  );
-}
-
-function PersonCard({ person }: { person: PersonResult }) {
-  const initials = person.person.display_name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const hasGhostWork = person.findings.length > 0;
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-[0_20px_50px_-30px_rgba(0,0,0,0.15)]">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-text">
-            {initials}
-          </span>
-          <p className="text-[15px] font-medium text-text">{person.person.display_name}</p>
-        </div>
-        {hasGhostWork ? (
-          <span className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-medium text-accent">
-            {person.findings.length} confirmed finding{person.findings.length === 1 ? "" : "s"}
-          </span>
-        ) : (
-          <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-muted">
-            Nothing beyond the dashboard
-          </span>
-        )}
-      </div>
-
-      <div className="grid gap-6 px-6 py-5 sm:grid-cols-2">
-        <div>
-          <p className="font-mono text-[11px] tracking-wide text-muted uppercase">What the dashboard says</p>
-          <dl className="mt-2 space-y-1 text-[14px] text-text">
-            <div className="flex justify-between">
-              <dt className="text-muted">Tickets closed</dt>
-              <dd className="font-medium">{person.visible.tickets_closed}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">Commits</dt>
-              <dd className="font-medium">{person.visible.commits}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">PRs</dt>
-              <dd className="font-medium">{person.visible.prs}</dd>
-            </div>
-          </dl>
-        </div>
-        <div>
-          <p className="font-mono text-[11px] tracking-wide text-muted uppercase">What Witness found</p>
-          <dl className="mt-2 space-y-1 text-[14px] text-text">
-            <div className="flex justify-between">
-              <dt className="text-muted">Confirmed unblocks</dt>
-              <dd className="font-medium">{person.invisible.confirmed_unblocks}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">Reviews</dt>
-              <dd className="font-medium">{person.invisible.reviews}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      {hasGhostWork && (
-        <div className="space-y-3 border-t border-border bg-surface-2/50 px-6 py-5">
-          {person.findings.map((f, i) => (
-            <div key={i} className="text-[14px] leading-relaxed text-text">
-              <p>{f.claim}</p>
-              <div className="mt-1.5">
-                <EvidenceBadges evidence={f.evidence} />
-              </div>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );

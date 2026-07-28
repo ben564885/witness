@@ -7,11 +7,15 @@
 //
 // POST /functions/ask
 // { "query": "who's my worst performer",
-//   "people": [{ "display_name", "visible", "invisible", "findings" }, ...] }
+//   "people": [{ "display_name", "visible", "invisible", "findings" }, ...],
+//   "history": [{ "question", "answer" }, ...] }   // optional, recent turns
 //
 // Returns { person_name: string | null, answer: string }. person_name is one
 // of the exact display_name values passed in (or null if the question isn't
 // about a specific person), so the caller can select that person's card.
+// history lets a follow-up like "why doesn't he get credit for it" resolve
+// against what was just discussed, via real multi-turn messages rather than
+// a flattened text block.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +43,7 @@ export default async function (req: Request): Promise<Response> {
   const body = await req.json().catch(() => null);
   const query: string | undefined = body?.query;
   const people: PersonSummary[] = body?.people ?? [];
+  const history: { question: string; answer: string | null }[] = body?.history ?? [];
   if (!query || people.length === 0) return json({ error: "query and people are required" }, 400);
 
   const names = people.map((p) => p.display_name);
@@ -70,6 +75,14 @@ Respond with strict JSON only, no markdown: {"person_name": "<exact name or null
 Team data:
 ${dataBlock}`,
         },
+        ...history.flatMap((turn) =>
+          turn.answer !== null
+            ? [
+                { role: "user" as const, content: turn.question },
+                { role: "assistant" as const, content: turn.answer },
+              ]
+            : [],
+        ),
         { role: "user", content: query },
       ],
       max_completion_tokens: 320,
