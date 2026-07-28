@@ -35,10 +35,10 @@ POST /run { sources, window_days, confirm_window_hours }
 
 ## Running the pipeline end to end
 
-Copy `.env.example` to `hydradb/.env` (the scripts below run with `hydradb/`
-as their working directory, which is where `dotenv/config` looks) and fill in
-InsForge, HydraDB, Slack/GitHub/Linear, and (optionally) RocketRide
-credentials — see the comments in that file for where each one comes from.
+Fill in `.env.local` at the repo root (copy `.env.example` for the full list)
+with InsForge, HydraDB, Slack/GitHub/Linear, and (optionally) RocketRide
+credentials. The scripts in `hydradb/` load that file explicitly by path
+regardless of working directory — no per-package `.env` needed.
 
 ```bash
 cd hydradb
