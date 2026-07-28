@@ -135,10 +135,10 @@ export default function Home() {
               </p>
               <div data-hero-reveal className="mt-8 flex flex-wrap items-center gap-3">
                 <a
-                  href="#proof"
+                  href="/demo"
                   className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
                 >
-                  See the proof
+                  See the live demo
                 </a>
                 <a
                   href="#how-it-works"

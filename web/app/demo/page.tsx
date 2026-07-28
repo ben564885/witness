@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "../components/Logo";
 import { AnimatedAIChat } from "@/components/ui/animated-ai-chat";
+import { SiGithub, SiLinear } from "react-icons/si";
+import { FaSlack } from "react-icons/fa";
+import type { IconType } from "react-icons";
 
 type SourceId = "slack" | "github" | "linear";
-const SOURCES: { id: SourceId; label: string }[] = [
-  { id: "slack", label: "Slack" },
-  { id: "github", label: "GitHub" },
-  { id: "linear", label: "Linear" },
+const SOURCES: { id: SourceId; label: string; icon: IconType; color: string }[] = [
+  { id: "slack", label: "Slack", icon: FaSlack, color: "#4A154B" },
+  { id: "github", label: "GitHub", icon: SiGithub, color: "#181717" },
+  { id: "linear", label: "Linear", icon: SiLinear, color: "#5E6AD2" },
 ];
+const SOURCE_BY_ID = Object.fromEntries(SOURCES.map((s) => [s.id, s]));
 
 interface Evidence {
   source: string;
@@ -41,6 +45,9 @@ export default function DemoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const skipNextAutoInsight = useRef(false);
 
   useEffect(() => {
     const sources = Array.from(enabled);
@@ -89,6 +96,84 @@ export default function DemoPage() {
   const people = selected ? allPeople.filter((p) => p.person.display_name === selected) : allPeople;
   const shortcuts = allPeople.map((p) => ({ id: p.person.display_name, name: p.person.display_name }));
 
+  const selectPerson = (id: string | null) => {
+    setSelected((prev) => (prev === id ? null : id));
+    setAiText(null);
+  };
+
+  // Exact-name match is free and instant; anything else (a real question,
+  // e.g. "who's my worst performer") goes to the AI query route, which
+  // resolves it against the actual team data and never invents a person.
+  const handleQuery = async (query: string) => {
+    const lower = query.toLowerCase();
+    const match = allPeople.find((p) => p.person.display_name.toLowerCase().includes(lower));
+    if (match) {
+      selectPerson(match.person.display_name);
+      return;
+    }
+    if (allPeople.length === 0) return;
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          people: allPeople.map((p) => ({
+            display_name: p.person.display_name,
+            visible: p.visible,
+            invisible: p.invisible,
+            findings: p.findings.map((f) => ({ claim: f.claim })),
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.person_name) {
+        skipNextAutoInsight.current = true;
+        setSelected(data.person_name);
+        setAiText(data.answer);
+      }
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Auto-generate the generic per-person insight whenever a single person is
+  // selected by name (button or exact match) — skipped when the selection
+  // just came from handleQuery, which already set a question-specific answer.
+  useEffect(() => {
+    if (!selected || people.length !== 1) return;
+    if (skipNextAutoInsight.current) {
+      skipNextAutoInsight.current = false;
+      return;
+    }
+    const person = people[0];
+    let cancelled = false;
+    setAiLoading(true);
+    setAiText(null);
+    fetch("/api/insight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        display_name: person.person.display_name,
+        visible: person.visible,
+        invisible: person.invisible,
+        findings: person.findings.map((f) => ({ claim: f.claim })),
+      }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!cancelled && res.ok) setAiText(data.insight);
+      })
+      .finally(() => {
+        if (!cancelled) setAiLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, result?.run_id]);
+
   return (
     <div className="min-h-screen bg-bg pb-24">
       <header className="border-b border-border bg-surface px-6 py-4">
@@ -113,7 +198,8 @@ export default function DemoPage() {
             people={shortcuts}
             selectedId={selected}
             loading={loading}
-            onSelectPerson={(id) => setSelected((prev) => (prev === id ? null : id))}
+            onSelectPerson={selectPerson}
+            onQuery={handleQuery}
           />
         </div>
 
@@ -121,21 +207,37 @@ export default function DemoPage() {
           <span className="font-mono text-[11px] tracking-wide text-muted uppercase">Sources</span>
           {SOURCES.map((s) => {
             const on = enabled.has(s.id);
+            const Icon = s.icon;
             return (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => toggle(s.id)}
                 aria-pressed={on}
-                className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
+                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
                   on ? "border-accent bg-accent text-white" : "border-border bg-surface text-muted hover:text-text"
                 }`}
               >
+                <Icon className="h-3.5 w-3.5" />
                 {s.label}
               </button>
             );
           })}
         </div>
+
+        {loading && (
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            {SOURCES.filter((s) => enabled.has(s.id)).map((s) => {
+              const Icon = s.icon;
+              return (
+                <span key={s.id} className="flex items-center gap-1.5 text-xs text-muted">
+                  <Icon className="h-3.5 w-3.5 animate-pulse" style={{ color: s.color }} />
+                  Checking {s.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {result?.degraded.note && (
           <div className="mt-5 rounded-lg border border-[#b8842c]/30 bg-[#b8842c]/10 px-4 py-3 text-[13px] leading-relaxed text-[#8a6420]">
@@ -145,6 +247,17 @@ export default function DemoPage() {
         {error && (
           <div className="mt-5 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-[13px] text-red-700">
             {error}
+          </div>
+        )}
+
+        {selected && (aiLoading || aiText) && (
+          <div className="mt-5 rounded-lg border border-accent/25 bg-accent/[0.06] px-4 py-3 text-[14px] leading-relaxed text-text">
+            <p className="mb-1 font-mono text-[10px] tracking-wide text-accent uppercase">AI take</p>
+            {aiLoading && !aiText ? (
+              <span className="text-muted">Thinking…</span>
+            ) : (
+              aiText
+            )}
           </div>
         )}
 
@@ -229,26 +342,34 @@ function PersonCard({ person }: { person: PersonResult }) {
             <div key={i} className="text-[14px] leading-relaxed text-text">
               <p>{f.claim}</p>
               <div className="mt-1.5 flex flex-wrap gap-2">
-                {f.evidence.map((e, j) =>
-                  e.url ? (
+                {f.evidence.map((e, j) => {
+                  const src = SOURCE_BY_ID[e.source];
+                  const Icon = src?.icon;
+                  const content = (
+                    <>
+                      {Icon && <Icon className="h-3 w-3" style={{ color: src.color }} />}
+                      {e.source}: {e.ref}
+                    </>
+                  );
+                  return e.url ? (
                     <a
                       key={j}
                       href={e.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-accent hover:bg-surface-2"
+                      className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-accent hover:bg-surface-2"
                     >
-                      {e.source}: {e.ref}
+                      {content}
                     </a>
                   ) : (
                     <span
                       key={j}
-                      className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-muted"
+                      className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-muted"
                     >
-                      {e.source}: {e.ref}
+                      {content}
                     </span>
-                  ),
-                )}
+                  );
+                })}
               </div>
             </div>
           ))}

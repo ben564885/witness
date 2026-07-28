@@ -55,20 +55,23 @@ export interface PersonShortcut {
 interface AnimatedAIChatProps {
   people: PersonShortcut[];
   onSelectPerson: (id: string) => void;
+  // Free-text submissions (typed name, or a natural-language question the
+  // exact-name shortcuts don't cover) go here — the parent tries an exact
+  // match first and falls back to the AI query route for anything else.
+  onQuery: (query: string) => void;
   selectedId: string | null;
   loading?: boolean;
 }
 
-export function AnimatedAIChat({ people, onSelectPerson, selectedId, loading }: AnimatedAIChatProps) {
+export function AnimatedAIChat({ people, onSelectPerson, onQuery, selectedId, loading }: AnimatedAIChatProps) {
   const [value, setValue] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({ minHeight: 56, maxHeight: 160 });
 
   const submitSearch = () => {
-    const query = value.trim().toLowerCase();
+    const query = value.trim();
     if (!query) return;
-    const match = people.find((p) => p.name.toLowerCase().includes(query));
-    if (match) onSelectPerson(match.id);
+    onQuery(query);
     setValue("");
     adjustHeight(true);
   };
@@ -110,6 +113,10 @@ export function AnimatedAIChat({ people, onSelectPerson, selectedId, loading }: 
               "w-full resize-none bg-transparent px-1 py-1 text-[15px] text-text",
               "placeholder:text-muted focus:outline-none",
             )}
+            // globals.css sets a site-wide :focus-visible outline outside any
+            // Tailwind layer, which wins over the focus:outline-none utility
+            // above regardless of source order — only an inline style beats it.
+            style={{ outline: "none" }}
           />
         </div>
 

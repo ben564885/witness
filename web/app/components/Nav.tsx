@@ -28,10 +28,10 @@ export function Nav() {
         </nav>
 
         <a
-          href="#proof"
+          href="/demo"
           className="rounded-full bg-text px-3.5 py-1.5 text-sm font-medium text-white transition hover:opacity-85"
         >
-          See the proof
+          See the live demo
         </a>
       </div>
     </header>
