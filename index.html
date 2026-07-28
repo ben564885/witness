@@ -420,18 +420,31 @@
       <h2>The system of record only credits what it can see.</h2>
       <p class="lede">Commits, PRs, tickets closed. The highest-leverage work looks nothing like that.</p>
       <div class="prose" style="margin-top: 20px;">
-        Unblocking a teammate, catching a bug in review, triaging an incident, all of it happens in Slack
-        and gets credited to whoever closes the ticket afterward. It's invisible on every dashboard, and
-        invisible at review time — the person doing the most for the team can be, by every visible metric,
-        the lowest performer on it.
+        Unblocking a teammate, catching a bug in review, triaging an incident — all of it happens in Slack
+        and gets credited to whoever closes the ticket afterward. In the workspace we built to test that
+        claim, the gap is measurable, not asserted:
+      </div>
+      <div class="figures">
+        <div class="fig">
+          <div class="n">2 / 24</div>
+          <div class="lbl">Tickets closed by the engineer who diagnosed the most incidents in Slack — last on the team by that metric</div>
+        </div>
+        <div class="fig">
+          <div class="n">7</div>
+          <div class="lbl">Slack threads where that diagnosis precedes someone else's ticket closing</div>
+        </div>
+        <div class="fig">
+          <div class="n">0</div>
+          <div class="lbl">Of those threads counted toward any ticket-based ranking</div>
+        </div>
       </div>
     </div>
   </section>
 
   <section class="slide" id="s-solution">
-    <span class="pagemark mono">02 / solution</span>
+    <span class="pagemark mono">02 / method</span>
     <div class="frame">
-      <p class="eyebrow">The solution</p>
+      <p class="eyebrow">The method</p>
       <h2>Witness surfaces that work, <span class="highlight">and cites the proof.</span></h2>
       <p class="prose" style="margin-top: 20px; max-width: 60ch;">
         For each engineer, it finds things they did that helped a ticket or PR credited to someone else.
@@ -550,7 +563,17 @@
         </div>
         <div class="fig">
           <div class="n">7 / 7</div>
-          <div class="lbl">Ghost-work threads found</div>
+          <div class="lbl">Confirmed unblock threads found</div>
+        </div>
+      </div>
+      <div class="rows" style="margin-top: 28px;">
+        <div class="row">
+          <div class="k">Identities</div>
+          <div class="v">Three personas, each a distinct real Slack account and Linear account — no shared identifier for entity resolution to lean on.</div>
+        </div>
+        <div class="row">
+          <div class="k">Filler generation</div>
+          <div class="v">~90 background messages generated from behavioral character briefs, blind to the detection rule — the signal wasn't hand-placed for the pipeline to find.</div>
         </div>
       </div>
     </div>
