@@ -63,30 +63,67 @@ h3 {
 }
 
 /*
- * Hero — a faint ledger grid instead of art: rows and columns that thin out
- * toward the right, evoking the dashboard the whole product argues against.
+ * Hero artwork — the ronin-and-fox illustration, cropped to the band with
+ * the koi-nobori banners overhead and the figure's hat and shoulders below —
+ * not the very top of the sky, not down to the grass and fox.
  */
 .hero-art {
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(to bottom, rgba(21, 22, 26, 0.05) 1px, transparent 1px),
-    linear-gradient(to right, rgba(21, 22, 26, 0.05) 1px, transparent 1px);
-  background-size: 100% 44px, 88px 100%;
-  background-position: 0 0, 0 0;
-  mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+  background-color: #9fb3a9;
+  background-image: url("/bggusethis.png");
+  background-position: center 32%;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
+/*
+ * Scrim for the text column: heaviest on the left where the copy sits,
+ * clearing to nothing on the right so the sky and banners stay visible
+ * behind the terminal panel. The second layer closes the band into the page
+ * background at the very bottom.
+ */
 .hero-veil {
-  background: linear-gradient(to bottom, transparent 0%, transparent 82%, var(--bg) 100%);
+  background:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 95%,
+      rgba(250, 249, 245, 0.35) 99%,
+      var(--bg) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgba(250, 249, 245, 0.92) 0%,
+      rgba(250, 249, 245, 0.78) 34%,
+      rgba(250, 249, 245, 0.32) 62%,
+      transparent 85%
+    );
 }
 
+/*
+ * Footer bookends the hero with the same artwork. The image anchors to its
+ * top edge here (the hero anchors to the bottom), so the page opens on the
+ * ground the figure walks and closes on the banners overhead. The cream wash
+ * sits heavy — footer type is small and muted, and has to stay readable over
+ * the busiest part of the art.
+ */
 .footer-art {
-  background-color: var(--bg);
+  background-color: #9fb3a9;
   background-image:
-    linear-gradient(to top, rgba(21, 22, 26, 0.05) 1px, transparent 1px),
-    linear-gradient(to right, rgba(21, 22, 26, 0.05) 1px, transparent 1px);
-  background-size: 100% 44px, 88px 100%;
-  mask-image: linear-gradient(to top, black 0%, black 60%, transparent 100%);
+    linear-gradient(
+      to bottom,
+      var(--bg) 0%,
+      rgba(250, 249, 245, 0.88) 14%,
+      rgba(250, 249, 245, 0.84) 58%,
+      rgba(250, 249, 245, 0.66) 100%
+    ),
+    url("/bggusethis.png");
+  background-position:
+    center top,
+    center top;
+  background-repeat: no-repeat;
+  background-size:
+    cover,
+    cover;
 }
 
 /*
